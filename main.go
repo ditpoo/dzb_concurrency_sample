@@ -307,7 +307,7 @@ func main() {
 			Label_name:      "RottenBannanaTRAILERS",
 		},
 	}
-	movie_trailers_cat := CategoryItem{
+	trailerCategory := CategoryItem{
 		Category_name: "movie_trailers",
 		Channels:      movie_trailer_channel,
 	}
@@ -316,19 +316,19 @@ func main() {
 	defer cancel()
 
 	// get channel with job items
-	yt_channel_chan := movie_trailers_cat.PrepareYoutubeChannelNames(ctx)
+	ytChannelChan := trailerCategory.PrepareYoutubeChannelNames(ctx)
 	// get go channel that will return an array of channel which individually retuns the scrapped video
 	// this is fanning out scrapping of individual yt channels
-	channel_vide_data_chans := movie_trailers_cat.VideoScrapper(ctx, yt_channel_chan, deazyb)
+	scrappedYtChannelChan := trailerCategory.VideoScrapper(ctx, ytChannelChan, deazyb)
 	// merge the ouputs from scrapped yt channels to a singe go channel 
-	channel_vide_data_chan := movie_trailers_cat.MergeVideoOuputChannels(ctx, channel_vide_data_chans)
+	mergedScrappedChannelOuputChan := trailerCategory.MergeVideoOuputChannels(ctx, scrappedYtChannelChan)
 	// again fan out process to get imdb id and then tmdb description and return videos on complete of processing
 	// this are rate limited workers workign concurrently where the tmdb worker depends on ouput of imdb worker
-	channel_vide_with_meta_data_chan := movie_trailers_cat.AddMetaData(ctx, channel_vide_data_chan, deazyb)
+	processedYtChannelDataChan := trailerCategory.AddMetaData(ctx, mergedScrappedChannelOuputChan, deazyb)
 	var videos []VideoData
-	for items := range channel_vide_with_meta_data_chan {
+	for items := range processedYtChannelDataChan {
 		videos = append(videos, items.Videos...)
 	}
-	log.Printf("Uploading %d items for Category %s", len(videos), movie_trailers_cat.Category_name)
-	log.Println(videos[0])
+	log.Printf("Uploading %d items for Category %s", len(videos), trailerCategory.Category_name)
+	log.Printf("%+v", videos[0])
 }
